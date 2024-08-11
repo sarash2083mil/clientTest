@@ -28,7 +28,8 @@ async function getCitiesList() {
 }
 
 function getDayTS() {
-    var ts = new Date().getTime();
+   // var ts = new Date().getTime();
+    const ts = new Date().toISOString().slice(0, 10);
     return ts;
 }
 
@@ -42,6 +43,8 @@ function getCachedCity(cityId) {
 
 function setCachedCity(cityId, cityResults) {
     const ts = getDayTS();
+    if(!cachedCityVotes[ts]?.length)
+       cachedCityVotes[ts] = [];
     cachedCityVotes[ts][cityId] = cityResults;
 }
 
@@ -55,8 +58,11 @@ async function getResultsByCity(cityId, cityName) {
     let jsonResult;
     //"https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q=%7B%22%D7%A9%D7%9D+%D7%99%D7%A9%D7%95%D7%91%22:%22%D7%92%D7%95%D7%A8%D7%9F%22%7D&limit=32000"
     //const url = "https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q=בני ברק&limit=5";
-    // if (jsonResult = getCachedCity(cityId))
-    //     return jsonResult;
+    if (jsonResult = getCachedCity(cityId)) {
+        console.log('from cache');
+        return jsonResult;
+    }
+
     const qValue = { "שם ישוב": cityName };
     const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q={"שם ישוב":"${cityName}"}&limit=5`;
     try {
@@ -66,7 +72,7 @@ async function getResultsByCity(cityId, cityName) {
         }
 
         jsonResult = await response.json();
-      //  setCachedCity(cityId, jsonResult);
+        setCachedCity(cityId, jsonResult);
         console.log(jsonResult);
 
         return jsonResult.result.records[0];
