@@ -5,7 +5,8 @@ $(document).ready(async function () {
 });
 let citiesList = [];
 const cacheCities = [];
-const CachedCityVotes = [];
+const cachedCityVotes = [];
+
 async function getCitiesList() {
     if (citiesList.length)
         return citiesList;
@@ -26,9 +27,36 @@ async function getCitiesList() {
     }
 }
 
+function getDayTS() {
+    var ts = new Date().getTime();
+    return ts;
+}
+
+function getCachedCity(cityId) {
+
+    const ts = getDayTS();
+    if (cachedCityVotes[ts] && cachedCityVotes[ts][cityId])
+        return cachedCityVotes[ts][cityId].result.records[0];
+    return null;
+}
+
+function setCachedCity(cityId, cityResults) {
+    const ts = getDayTS();
+    cachedCityVotes[ts][cityId] = cityResults;
+}
+
+function removeCacheOnceADay() {
+    var d = new Date().getTime();
+    if (cachedCityVotes[d])
+        Array.splice(cachedCityVotes[d]);
+}
+
 async function getResultsByCity(cityId, cityName) {
+    let jsonResult;
     //"https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q=%7B%22%D7%A9%D7%9D+%D7%99%D7%A9%D7%95%D7%91%22:%22%D7%92%D7%95%D7%A8%D7%9F%22%7D&limit=32000"
     //const url = "https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q=בני ברק&limit=5";
+    // if (jsonResult = getCachedCity(cityId))
+    //     return jsonResult;
     const qValue = { "שם ישוב": cityName };
     const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=929b50c6-f455-4be2-b438-ec6af01421f2&q={"שם ישוב":"${cityName}"}&limit=5`;
     try {
@@ -37,9 +65,11 @@ async function getResultsByCity(cityId, cityName) {
             throw new Error(`Response status: ${response.success}`);
         }
 
-        const json = await response.json();
-        console.log(json);
-        return json;
+        jsonResult = await response.json();
+      //  setCachedCity(cityId, jsonResult);
+        console.log(jsonResult);
+
+        return jsonResult.result.records[0];
     } catch (error) {
         console.error(error.message);
         return ("ERROR");
@@ -51,7 +81,7 @@ async function getResults() {
     let result = await getCitiesList();
     if (!result || result == "ERROR") {
         $("#resultState").show();
-        $("#resultState").innerHTML = "Service Error";
+        $("#resultState").html("Service Error");
         $("#resultsContainer").hide();
     }
     else {
@@ -75,10 +105,14 @@ async function getResults() {
                 const response = await getResultsByCity(e.target.value, e.target.children[e.target.value - 1].text);
                 const array = prepareResponseForChart(response);
                 createChart(array);
-
+                $("#resultState").hide();
+                $("#votesResultsPerYear").show();
                 console.log(`Response: ${response.status}`);
             } catch (e) {
                 console.error(`Error: ${e}`);
+                $("#resultState").html("Service Error");
+                $("#resultState").show();
+                $("#votesResultsPerYear").hide();
             }
         })
 
@@ -125,9 +159,9 @@ function prepareResponseForChart(array) {
     let preparedArray = [];
     const size = 7;
     const minimalVotes = 10;
-    let data = array.result.records[0];
+    let data = array;
     //recommended - get from api in const place (not hear )the valid list of parties for the required year . 
-    var validPartiesNames = [ 'אמת', 'ג', 'ודעם', 'ז', 'זך', 'זץ', 'טב', 'י', 'יז', 'יך', 'יץ', 'כ', 'ל', 'מחל', 'מרצ', 'נז', 'ני', 'נץ', 'ע', 'פה', 'ף', 'ףץ', 'קנ', 'קץ', 'רק', 'שס'];
+    var validPartiesNames = ['אמת', 'ג', 'ודעם', 'ז', 'זך', 'זץ', 'טב', 'י', 'יז', 'יך', 'יץ', 'כ', 'ל', 'מחל', 'מרצ', 'נז', 'ני', 'נץ', 'ע', 'פה', 'ף', 'ףץ', 'קנ', 'קץ', 'רק', 'שס'];
     $.each(data, function (key, valueObj) {
         if (validPartiesNames.indexOf(key) > -1 && valueObj >= minimalVotes) {
             preparedArray.push({ "party": key, "number": valueObj })
