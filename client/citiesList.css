@@ -1,0 +1,11 @@
+select option {
+    color: blue;
+    cursor: hand;
+    padding: 5px 3px;
+}
+
+select {
+    height: 32px;
+    margin: auto;
+    margin-left: 50%;
+}
